@@ -1,58 +1,82 @@
-"""CPU functionality."""
+"""
+CPU functionality.
+"""
 
 import sys
-filename = sys.argv[1]
-print(filename)
 
+HLT = 0b00000001 
 LDI = 0b10000010
 PRN = 0b01000111
-HLT = 0b00000001
 MUL = 0b10100010
+
 
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
-        """Construct a new CPU."""
+        # ram that holds 256 bytes (list of 0)
         self.ram = [0] * 256
+        # 8 registers (list of 0)
         self.reg = [0] * 8
+        # internal pc register = 0
         self.pc = 0
+        # setup branch table
         self.running = True
+        self.branchtable = {}
+        self.branchtable[HLT] = self.handle_HLT
+        self.branchtable[LDI] = self.handle_LDI
+        self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[MUL] = self.handle_MUL
 
-    def load(self):
+
+    # branch table methods
+    def handle_HLT(self, *args):
+        self.running = False
+
+    def handle_LDI(self, op_a, op_b):
+        self.reg[op_a] = op_b
+
+    def handle_PRN(self, op_a, op_b):
+        print(self.reg[op_a])
+
+    def handle_MUL(self, op_a, op_b):
+        self.alu('MUL', op_a, op_b)
+
+    # end branch table methods
+
+    def ram_read(self, MAR): # MAR = Memory address register
+        # uses an address to read and returns the value stored at that address
+        return self.ram[MAR]
+
+    def ram_write(self, MAR, MDR): # MDR = Memory data register
+        self.ram[MAR] = MDR
+
+
+    def load(self, filename):
         """Load a program into memory."""
 
-        address = 0
-
-        # For now, we've just hardcoded a program:
-            # program = [
-            #     # From print8.ls8
-            #     0b10000010, # LDI R0,8
-            #     0b00000000,
-            #     0b00001000,
-            #     0b01000111, # PRN R0
-            #     0b00000000,
-            #     0b00000001, # HLT
-            # ]
-
-            # for instruction in program:
-            #     self.ram[address] = instruction
-            #     address += 1
-
-
-
-    def ram_read(self, MAR):
-        return self.ram[MAR]
+        try:
+            address = 0
+            with open(filename) as f:
+                for line in f:
+                    line = line.split('#')
+                    temp = line[0].strip()
+                    if temp:
+                        value = int(temp, 2)
+                        self.ram[address] = value
+                        address += 1
         
-    def ram_write(self, MAR, MDR):
-        self.ram[MAR] = MDR
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {filename} not found")
+        
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == 'MUL':
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -80,21 +104,13 @@ class CPU:
         """Run the CPU."""
 
         while self.running:
-            ir = self.ram[self.pc]
-            operand_a = self.ram_read(self.pc + 1)
-            operand_b = self.ram_read(self.pc + 2)
+            ir = self.ram_read(self.pc)
 
-            if ir == HLT:
-                # exit
-                self.running = False
-            elif ir == LDI:
-                # Set the value of a register to an integer.
-                self.reg[operand_a] = [operand_b]
-                self.pc += 3
-            elif ir == PRN:
-                # Print numeric value stored in the given register.
-                print(self.reg[operand_a])
-                self.pc += 2
-            else:
-                print(f'unknown instruction {ir} at address {self.pc}')
-                self.running = False
+            op_a = self.ram_read(self.pc + 1)
+            op_b = self.ram_read(self.pc + 2)
+
+            add_to_pc = (ir >> 6) + 1
+
+            self.branchtable[ir](op_a, op_b)
+
+            self.pc += add_to_pc
