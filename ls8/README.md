@@ -65,6 +65,25 @@ but you'll have to implement those three above instructions first!
 * Read this whole file.
 * Skim the spec.
 
+examples - example programs we will run through the emulator
+  cpu.py - where the cpu is
+    has:
+      init - nothing there yet
+      load - address / hardcoded program / for loop through ram (loads the program) 
+      alu - not sure yet
+      trace - prints CPU state
+      run - nothing there yet
+    needs:
+      reg / ram / pc / ram_read
+  ls8.py - the computer emulator
+    has:
+      cpu - imported. loads the program. run the program
+    needs:
+      not sure yet
+  faq.md - and faq
+  ls8-cheatsheet.md - a cheatsheet for ls8 opcode and operands
+  ls8-spec.md - a breakdown of how ls8 should work
+
 ## Step 1: Add the constructor to `cpu.py`
 
 Add list properties to the `CPU` class to hold 256 bytes of memory and 8
