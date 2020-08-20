@@ -8,6 +8,8 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 
 class CPU:
@@ -27,7 +29,10 @@ class CPU:
         self.branchtable[LDI] = self.handle_LDI
         self.branchtable[PRN] = self.handle_PRN
         self.branchtable[MUL] = self.handle_MUL
-
+        self.branchtable[PUSH] = self.handlePUSH
+        self.branchtable[POP] = self.handlePOP
+        self.stack_pointer = 0xf4
+        self.reg[7] = self.stack_pointer
 
     # branch table methods
     def handle_HLT(self, *args):
@@ -41,6 +46,34 @@ class CPU:
 
     def handle_MUL(self, op_a, op_b):
         self.alu('MUL', op_a, op_b)
+
+    def handlePUSH(self, a, b=None):
+        # decrement stack pointer
+        self.stack_pointer -= 1
+        self.stack_pointer &= 0xff  # keep in range of 00-FF
+
+        # get register number and value stored at specified regn umber
+        reg_num = self.ram[self.pc + 1]
+        val = self.reg[reg_num]
+
+        # store value in ram
+        self.ram[self.stack_pointer] = val
+        self.pc += 2
+
+    def handlePOP(self, a, b=None):
+        # get value from RAM
+        address = self.stack_pointer
+        val = self.ram[address]
+
+        # store at given register
+        reg_num = self.ram[self.pc + 1]
+        self.reg[reg_num] = val
+
+        # increment stack pointer and program counter
+        self.stack_pointer += 1
+        self.stack_pointer &= 0xff  # keep in range of 00-FF
+
+        self.pc += 2
 
     # end branch table methods
 
